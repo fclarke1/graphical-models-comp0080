@@ -6,15 +6,39 @@ V = 3  # number of observable states
 H = 3  # number of Markov models
 
 
-def condp(data):
+def condp(data: np.array) -> np.array:
+    """Return a conditional distribution from a data array
+
+    Note that all columns sum to 1
+
+    Args:
+        data: An array of data
+
+    Returns:
+        np.array: the conditional distribution
+    """
     return data / np.sum(data, axis=0)
 
 
-def condexp(logp):
+def condexp(logp: np.array) -> np.array:
+    """Compute the exponential of the log probability
+
+    Args:
+        logp: log probability
+
+    Returns:
+        np.array: conditional distribution
+    """
     return condp(np.exp(logp - np.max(logp, 0)))
 
 
-def uniform_initialization():
+def uniform_initialization() -> tuple[np.array, np.array, np.array]:
+    """Uniformly initialize the parameters
+
+    Returns:
+        tuple[np.array, np.array, np.array]: uniform p(h),
+            p(v_1|h), p(v_t|v_{t - 1},h)
+    """
     ph = np.full((H, 1), 1/H)
     pv1gh = np.full((V, H), 1/V)
     pvgvh = np.full((V, V, H), 1/V)
@@ -22,7 +46,15 @@ def uniform_initialization():
     return ph, pv1gh, pvgvh
 
 
-def random_initialization():
+def random_initialization() -> tuple[np.array, np.array, np.array]:
+    """Randomly initialize the parameters
+
+    Taken from a uniform distribution
+
+    Returns:
+        tuple[np.array, np.array, np.array]: random p(h),
+            p(v_1|h), p(v_t|v_{t-1},h)
+    """
     uniform = np.random.uniform
     ph = uniform(size=(H, 1))
     pv1gh = uniform(size=(V, H))
@@ -31,7 +63,15 @@ def random_initialization():
     return condp(ph), condp(pv1gh), condp(pvgvh)
 
 
-def prior_pvgvh():
+def prior_pvgvh() -> np.array:
+    """Set p(v_t|v_{t-1},h) from the data
+
+    Computes the empirical distribution from the data
+
+    Returns:
+        np.array: a (V,V,H) matrix for the conditional distribution
+            of p(v_t|v_{t-1},h) based on the data
+    """
     pvgvh = np.zeros((V, H))
     for h in range(H):
         r, c = np.where(data[:, :-1] == h)
@@ -106,7 +146,7 @@ print(pvgvh[:, :, 1])
 print("h = 3:")
 print(pvgvh[:, :, 2])
 
-print(f"\nlog liklihood for these parameters: {loglik:.4f}")
+print(f"\nlog likelihood for these parameters: {loglik:.4f}")
 
 print("\nposterior for first 10 rows:")
 print(np.around(phgv, 4)[:10])
