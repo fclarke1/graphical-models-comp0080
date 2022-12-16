@@ -1,14 +1,15 @@
 import numpy as np
+from numpy.typing import NDArray
 
 
-def echelon(m: np.array) -> np.array:
+def echelon(m: NDArray) -> NDArray:
     """Return the echelon version of a matrix
 
     Args:
         m: the matrix to be echeloned
 
     Returns:
-        np.array: an echelon version of the given matrix
+        NDArray: an echelon version of the given matrix
     """
     if 0 in m.shape:
         # one of the rows or cols is zero, no more actions to take
@@ -43,14 +44,14 @@ def echelon(m: np.array) -> np.array:
     return np.vstack((m[0], m_sub))
 
 
-def rref(m: np.array) -> np.array:
+def rref(m: NDArray) -> NDArray:
     """Return the rref of a given matrix
 
     Args:
         m: the matrix to be rref
 
     Returns:
-        np.array: the rref version of m
+        NDArray: the rref version of m
     """
     m_ech = echelon(m)
 
@@ -71,14 +72,14 @@ def rref(m: np.array) -> np.array:
     return m_ech
 
 
-def create_encoder_matrix(h: np.array) -> tuple[np.array, np.array]:
+def create_encoder_matrix(h: NDArray) -> tuple[NDArray, NDArray]:
     """Generate an encoder matrix for a parity check matrix
 
     Args:
         h: a parity check matrix
 
     Returns:
-        tuple[np.array, np.array]: a tuple of the rref equivalent
+        tuple[NDArray, NDArray]: a tuple of the rref equivalent
             form of h, and the generator matrix
     """
     H_rref = rref(h)
