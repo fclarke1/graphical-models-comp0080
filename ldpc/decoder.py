@@ -111,7 +111,6 @@ def decode(
         # see if decoded message is a valid codeword
         if not np.any(H @ decoded % 2):
             # decoded is a valid codeword, we can halt the algorithm
-            print("found decoded word")
             return_code = 0
             break
 
@@ -135,7 +134,9 @@ y = np.loadtxt("y1.txt")
 # )
 # y = np.array([1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
 
-decoded, _ = decode(H, y, 0.1, max_iters=200)
+decoded, success = decode(H, y, 0.1, max_iters=200)
 
-empirical_noise_ratio = 1 - np.count_nonzero(y == decoded) / len(decoded)
-print(f"empirical_noise_ratio: {empirical_noise_ratio:.2f}")
+if success == 0:
+    print("successful decoding")
+    empirical_noise_ratio = 1 - np.count_nonzero(y == decoded) / len(decoded)
+    print(f"empirical_noise_ratio: {empirical_noise_ratio:.2f}")
