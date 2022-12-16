@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def initialise(H: NDArray, y: NDArray, p: float) -> NDArray:
+def initialise_messages(H: NDArray, y: NDArray, p: float) -> NDArray:
     """Initialise messages from bit to check nodes
 
     The log-likelihood of the bit node v conditioned on its observed value
@@ -96,7 +96,7 @@ def decode(
     decoded = y
 
     # initialise the messages (the first round of messages from bit to check nodes)
-    m_v = initialise(H, y, p)
+    m_v = initialise_messages(H, y, p)
     # do the first round of message passing from check to bit nodes
     m_cv = check_to_message(m_v)
 
@@ -140,3 +140,7 @@ if success == 0:
     print("successful decoding")
     empirical_noise_ratio = 1 - np.count_nonzero(y == decoded) / len(decoded)
     print(f"empirical_noise_ratio: {empirical_noise_ratio:.2f}")
+
+    original_msg = bytearray(np.packbits(decoded[:248])).decode().strip("\x00")
+    print("---- DECODED MESSAGE -----")
+    print(original_msg)
