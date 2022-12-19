@@ -1,0 +1,55 @@
+import numpy as np
+import math
+
+b = 4 #set beta
+
+#initialize the lattice with random values
+lattice = np.random.binomial(1, 0.5, size=(10, 10))
+
+#set number of iterations and initial number of samples to burn
+iter = 10000
+burn = 100
+
+#create an array to store the samples - only interested in the values at position 9 and 99 so only save these
+samples = np.zeros((iter, 2))
+
+def neighbours(lattice,x,y):
+    '''
+    Function that returns neighbour values in a list of given point on lattice
+    Input:
+    lattice (array) : nxn array
+    x (int) : x position on lattice < n
+    y (int) : y position on lattice < n
+    Output:
+    neighbours (list) : list of values of the neighbours on the lattice
+    '''
+    neighbours = []
+    if x > 0:
+        neighbours.append(lattice[x-1,y])
+    if x < 9:
+        neighbours.append(lattice[x+1,y])
+    if y > 0:
+        neighbours.append(lattice[x,y-1])
+    if y < 9:
+        neighbours.append(lattice[x,y+1])
+    return neighbours
+
+#iterate through the sampling process
+for i in range(iter + burn):
+  for x in range(10):
+    for y in range(10):
+      # Calculate the conditional probability based on the neighbours
+      p = (math.exp(b*sum(neighbours(lattice, x, y))))/(math.exp(b*sum(neighbours(lattice, x, y))) + math.exp(b*sum(abs(neighbour - 1) for neighbour in neighbours(lattice, x,y))))
+      # Sample from the full conditional distribution of lattice[x,y], given the neighbors
+      lattice[x,y] = np.random.binomial(1, p)
+  if i > burn: # Store the samples of both corners for samples after burn period
+    samples[i - burn,0] = lattice[0,9]
+    samples[i - burn,1] = lattice[9,9]
+
+p_0_0 = np.count_nonzero(np.all(samples==np.array([0,0]), axis=1)) / iter
+p_0_1 = np.count_nonzero(np.all(samples==np.array([0,1]), axis=1)) / iter
+p_1_0 = np.count_nonzero(np.all(samples==np.array([1,0]), axis=1)) / iter
+p_1_1 = np.count_nonzero(np.all(samples==np.array([1,1]), axis=1)) / iter
+
+joint_dist = np.array([[p_0_0, p_0_1], [p_1_0, p_1_1]])
+print(joint_dist)
