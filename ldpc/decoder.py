@@ -2,10 +2,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def initialise_messages(H: NDArray, y: NDArray, p: float) -> NDArray:
-    """Initialise messages from bit to check nodes
+def initialise_probs(H: NDArray, y: NDArray, p: float) -> NDArray:
+    """Initialise probabilities
 
-    The log-likelihood of the bit node v conditioned on its observed value
+    The log-likelihood of bit node v conditioned on its observed value.
+    These act as the first messages to be passed from bit to check node.
 
     Args:
         H: a parity check matrix
@@ -13,61 +14,60 @@ def initialise_messages(H: NDArray, y: NDArray, p: float) -> NDArray:
         p: the noise ratio
 
     Returns:
-        NDArray: a matrix of initialized messages from
-            bits to checks
+        NDArray: a matrix of initialised probabilities
     """
     log_lik = np.log((1 - p) / p)
     y_lik = np.where(y == 0, log_lik, -log_lik)
     return H * y_lik
 
 
-def message_to_check(m_v: NDArray, m_cv: NDArray) -> NDArray:
+def bit_to_check(m_v: NDArray, p_mat: NDArray) -> NDArray:
     """Pass messages from bit nodes to check nodes
 
     Args:
         m_v: the initial messages from bit to check
-        m_cv: the current messages from check to bit
+        p_mat: a matrix of the current probabilities
 
     Returns:
-        NDArray: a matrix of messages from bit to check nodes
+        NDArray: an updated matrix of probabilities
     """
     # initialise the return matrix as the initial bit to check messages
-    m_vc = m_v.copy()
+    new_p_mat = m_v.copy()
 
     # iterate through columns (bit nodes)
-    for idx, row in enumerate(m_cv.T):
+    for idx, col in enumerate(p_mat.T):
         # find the nonzero elements (the check nodes incident to this bit node)
-        non_zeros = np.nonzero(row)
-        # calculate the updated message
-        row_sums = np.sum(row[non_zeros]) - row[non_zeros]
+        non_zeros = np.nonzero(col)
+        # calculate the updated probabilities
+        col_sums = np.sum(col[non_zeros]) - col[non_zeros]
         # add to the initial messages for this bit node
-        m_vc.T[idx][non_zeros] += row_sums
+        new_p_mat.T[idx][non_zeros] += col_sums
 
-    return m_vc
+    return new_p_mat
 
 
-def check_to_message(m_vc: NDArray) -> NDArray:
+def check_to_bit(p_mat: NDArray) -> NDArray:
     """Pass messages from check nodes to bit nodes
 
     Args:
-        m_vc: the current messages from bit to check
+        p_mat: a matrix of the current probabilities
 
     Returns:
-        NDArray: a matrix of messages from check to bit nodes
+        NDArray: an updated matrix of probabilities
     """
-    m_cv = np.zeros(m_vc.shape)
+    new_p_mat = np.zeros(p_mat.shape)
 
     # iterate through the rows (check nodes)
-    for idx, row in enumerate(m_vc):
+    for idx, row in enumerate(p_mat):
         # find the nonzero elements (the bit nodes incident to this check node)
         non_zeros = np.nonzero(row)
         # calculate the updated message
         row_tanh = np.prod(np.tanh(row[non_zeros] / 2))
         prod_tanh = row_tanh / np.tanh(row[non_zeros] / 2)
         # update the row in the return matrix with the updated messages
-        m_cv[idx][non_zeros] = np.log((1 + prod_tanh) / (1 - prod_tanh))
+        new_p_mat[idx][non_zeros] = np.log((1 + prod_tanh) / (1 - prod_tanh))
 
-    return m_cv
+    return new_p_mat
 
 
 def decode(
@@ -93,29 +93,30 @@ def decode(
             denoting whether the algorithm converged to an answer.
     """
     return_code = -1
+    # start off with decoded as the same as the received word
     decoded = y
 
-    # initialise the messages (the first round of messages from bit to check nodes)
-    m_v = initialise_messages(H, y, p)
-    # do the first round of message passing from check to bit nodes
-    m_cv = check_to_message(m_v)
+    # initialise the probabilities (the first round of messages from bit to check nodes)
+    m_v = initialise_probs(H, y, p)
+    # initialise the probabilities matrix to be updated by the algorithm
+    p_mat = m_v.copy()
 
     # iterate through the algorithm
     for _ in range(max_iters):
-        # calculate next round of messages from bit to check nodes
-        m_vc = message_to_check(m_v, m_cv)
+        # next round of message passing from check to bit nodes
+        p_mat = check_to_bit(p_mat)
 
         # generate a tentative decoding
-        liks = np.sum(m_vc, axis=0)
-        decoded = np.where(liks < 0, 1, 0)
-        # see if decoded message is a valid codeword
+        decoded = np.where(np.sum(p_mat, axis=0) < 0, 1, 0)
+        # see if decoded is a valid codeword
         if not np.any(H @ decoded % 2):
             # decoded is a valid codeword, we can halt the algorithm
             return_code = 0
             break
 
-        # decoded is not a valid codeword so we move onto the next round
-        m_cv = check_to_message(m_vc)
+        # we don't have a valid codeword, proceed to next round of messages from bit to
+        # check nodes
+        p_mat = bit_to_check(m_v, p_mat)
 
     return decoded, return_code
 
@@ -137,10 +138,11 @@ y = np.loadtxt("y1.txt")
 decoded, success = decode(H, y, 0.1, max_iters=200)
 
 if success == 0:
-    print("successful decoding")
+    print("---- SUCCESSFUL DECODING -----")
     empirical_noise_ratio = 1 - np.count_nonzero(y == decoded) / len(decoded)
-    print(f"empirical_noise_ratio: {empirical_noise_ratio:.2f}")
+    print(f"empirical noise ratio: {empirical_noise_ratio:.2f}")
 
     original_msg = bytearray(np.packbits(decoded[:248])).decode().strip("\x00")
-    print("---- DECODED MESSAGE -----")
-    print(original_msg)
+    print(f"decoded message: {original_msg}")
+else:
+    print("---- unsuccessful decoding -----")
