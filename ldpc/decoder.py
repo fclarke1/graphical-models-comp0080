@@ -64,7 +64,7 @@ def check_to_bit(p_mat: NDArray) -> NDArray:
         # calculate the updated message
         row_tanh = np.prod(np.tanh(row[non_zeros] / 2))
         prod_tanh = row_tanh / np.tanh(row[non_zeros] / 2)
-        # update the row in the return matrix with the updated messages
+        # update the row in the return matrix with the updated probabilities
         new_p_mat[idx][non_zeros] = np.log((1 + prod_tanh) / (1 - prod_tanh))
 
     return new_p_mat
