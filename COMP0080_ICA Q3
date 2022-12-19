@@ -53,7 +53,7 @@ def neighbours(point):
 
 iter = 0 #set number of iterations
 
-while (iter<1000): #or diff < 0.001):
+while (iter<1000):
     for ii in range(0,100): #loop through every point on the lattice, updating marginal
         qstar[ii] = qnew(neighbours(ii), q) #save new dist to qstar
     q = qstar.copy() #update vector of all dist for every iteration
