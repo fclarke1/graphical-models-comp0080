@@ -37,13 +37,13 @@ def neighbours(point):
     '''
     neighbours = []
 
-    if (point - 1)%10 != 9:
+    if (point - 1)%10 != 9: #check subtracting one doesn't include point from previous row
         neighbours.append(point - 1)
-    if (point + 1)%10 != 0:
+    if (point + 1)%10 != 0: #check adding one doesn't include point from next row
         neighbours.append(point + 1)
-    if (point - 10) >= 0:
+    if (point - 10) >= 0: #check subtracting ten doesn't include point out of the range of values
         neighbours.append(point - 10)
-    if (point + 10) < 100:
+    if (point + 10) < 100: #check adding ten doesn't include point out of the range of values
         neighbours.append(point + 10)
     
     return neighbours
@@ -62,5 +62,3 @@ while (iter<1000): #or diff < 0.001):
 
 joint_dist = np.array([[(1-q[9])*(1-q[99]), (1-q[9])*(q[99])] , [(q[9])*(1-q[99]), q[9]*q[99]]]) #find the joint dist of points 9 and 99 
 print(joint_dist)
-
-print(q)
