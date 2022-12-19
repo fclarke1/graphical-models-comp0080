@@ -1,0 +1,66 @@
+import numpy as np
+import math
+
+#10x10 lattice treated as a vector of 100 numbers, numbered from 0 to 99 moving along the rows. 
+#the top and bottom right corners are therefore in position 9 and 99
+
+b = 4 #set beta
+
+rng = np.random.default_rng()
+q = rng.random(100) #set random initial values for marginal dist
+qstar = np.zeros(100) #this vector will keep track of the updated probabilities
+
+def qnew(neighbours, q): 
+    
+    '''
+    Function to update the marginal distribution of a point by calculating e^beta*(sum of neighbours distribution), then normalise
+    Input:
+    neighbours: the index values of the neighbouring points of the lattice
+    q: the vector of marginal distributions for all points on the lattice
+    Output:
+    qnew: new marginal distribution for the point 
+    '''
+    q1new = math.exp(b * sum(q[j] for j in neighbours))
+    q0new = math.exp(b * sum((1-q)[jj] for jj in neighbours)) #to find the prob it is equal to zero, add all the neighbouring marginals = 0
+
+    qnew = q1new/(q1new + q0new) #normalise
+    return qnew
+
+
+def neighbours(point):
+    '''
+    Function to find the neighbour positions of a point
+    Input:
+    point: position of the point within the vector of 100 values representing a 10x10 lattice
+    Output:
+    neighbours: a list of positions of neighbours of the point
+    '''
+    neighbours = []
+
+    if (point - 1)%10 != 9:
+        neighbours.append(point - 1)
+    if (point + 1)%10 != 0:
+        neighbours.append(point + 1)
+    if (point - 10) >= 0:
+        neighbours.append(point - 10)
+    if (point + 10) < 100:
+        neighbours.append(point + 10)
+    
+    return neighbours
+
+#find mean field approx using coordinate ascent. Iterate through the loop until convergence (must converge with enough iterations)
+#coordinate ascent loops through every point, updating the marginal distribution using the qnew() function
+
+iter = 0 #set number of iterations
+
+while (iter<1000): #or diff < 0.001):
+    for ii in range(0,100): #loop through every point on the lattice, updating marginal
+        qstar[ii] = qnew(neighbours(ii), q) #save new dist to qstar
+    q = qstar.copy() #update vector of all dist for every iteration
+
+    iter += 1
+
+joint_dist = np.array([[(1-q[9])*(1-q[99]), (1-q[9])*(q[99])] , [(q[9])*(1-q[99]), q[9]*q[99]]]) #find the joint dist of points 9 and 99 
+print(joint_dist)
+
+print(q)
