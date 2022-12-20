@@ -55,7 +55,7 @@ def check_to_bit(p_mat: NDArray) -> NDArray:
     Returns:
         NDArray: an updated matrix of probabilities
     """
-    new_p_mat = np.zeros(p_mat.shape)
+    new_p_mat = np.zeros_like(p_mat)
 
     # iterate through the rows (check nodes)
     for idx, row in enumerate(p_mat):
@@ -96,10 +96,11 @@ def decode(
     # start off with decoded as the same as the received word
     decoded = y
 
-    # initialise the probabilities (the first round of messages from bit to check nodes)
-    m_v = initialise_probs(H, y, p)
     # initialise the probabilities matrix to be updated by the algorithm
-    p_mat = m_v.copy()
+    p_mat = initialise_probs(H, y, p)
+    # freeze the initialised probabilities to be used as the first round of messages
+    # from bit to check nodes
+    m_v = p_mat.copy()
 
     # iterate through the algorithm
     for _ in range(max_iters):
