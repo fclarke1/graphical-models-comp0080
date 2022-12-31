@@ -1,64 +1,55 @@
 import numpy as np
 import math
 
-#10x10 lattice treated as a vector of 100 numbers, numbered from 0 to 99 moving along the rows. 
-#the top and bottom right corners are therefore in position 9 and 99
+b = 1 #set beta
 
-b = 4 #set beta
+#initialize the lattice containing random values of q(x)
+lattice = np.random.rand(10, 10) #set random initial values for marginal dist
+#print(lattice)
 
-rng = np.random.default_rng()
-q = rng.random(100) #set random initial values for marginal dist
-qstar = np.zeros(100) #this vector will keep track of the updated probabilities
-
-def qnew(neighbours, q): 
-    
+def neighbours(lattice,x,y):
     '''
-    Function to update the marginal distribution of a point by calculating e^beta*(sum of neighbours distribution), then normalise
+    Function that returns neighbour values in a list of given point on lattice
     Input:
-    neighbours: the index values of the neighbouring points of the lattice
-    q: the vector of marginal distributions for all points on the lattice
+    lattice (array) : mxn array
+    x (int) : x position on lattice < m
+    y (int) : y position on lattice < n
     Output:
-    qnew: new marginal distribution for the point 
+    neighbours (list) : list of values of the neighbours on the lattice
     '''
-    q1new = math.exp(b * sum(q[j] for j in neighbours))
-    q0new = math.exp(b * sum((1-q)[jj] for jj in neighbours)) #to find the prob it is equal to zero, add all the neighbouring marginals = 0
-
-    qnew = q1new/(q1new + q0new) #normalise
-    return qnew
-
-
-def neighbours(point):
-    '''
-    Function to find the neighbour positions of a point
-    Input:
-    point: position of the point within the vector of 100 values representing a 10x10 lattice
-    Output:
-    neighbours: a list of positions of neighbours of the point
-    '''
+    m = lattice.shape[0]
+    n = lattice.shape[1]
     neighbours = []
 
-    if (point - 1)%10 != 9: #check subtracting one doesn't include point from previous row
-        neighbours.append(point - 1)
-    if (point + 1)%10 != 0: #check adding one doesn't include point from next row
-        neighbours.append(point + 1)
-    if (point - 10) >= 0: #check subtracting ten doesn't include point out of the range of values
-        neighbours.append(point - 10)
-    if (point + 10) < 100: #check adding ten doesn't include point out of the range of values
-        neighbours.append(point + 10)
-    
+    if x > 0:
+        neighbours.append(lattice[x-1,y])
+    if x < (m - 1):
+        neighbours.append(lattice[x+1,y])
+    if y > 0:
+        neighbours.append(lattice[x,y-1])
+    if y < (n - 1):
+        neighbours.append(lattice[x,y+1])
     return neighbours
 
-#find mean field approx using coordinate ascent. Iterate through the loop until convergence (must converge with enough iterations)
-#coordinate ascent loops through every point, updating the marginal distribution using the qnew() function
+#define q_1
+def q_1(lattice, x, y):
+    q_1 = math.exp(b*sum(neighbours(lattice, x, y)))
+    return q_1
 
-iter = 0 #set number of iterations
+#define q_0
+def q_0(lattice, x, y):
+    n_0 = [(1 - n) for n in neighbours(lattice, x, y)]
+    q_0 = math.exp(b*sum(n_0))
+    return q_0
 
-while (iter<1000):
-    for ii in range(0,100): #loop through every point on the lattice, updating marginal
-        qstar[ii] = qnew(neighbours(ii), q) #save new dist to qstar
-    q = qstar.copy() #update vector of all dist for every iteration
+#iterate through the lattice working through each node xk updating q(xk)
+for iter in range(1000):
+    for y in range(10):
+        for x in range(10):
+            lattice[x,y] = q_1(lattice,x,y)/(q_1(lattice,x,y) + q_0(lattice,x,y))
 
-    iter += 1
-
-joint_dist = np.array([[(1-q[9])*(1-q[99]), (1-q[9])*(q[99])] , [(q[9])*(1-q[99]), q[9]*q[99]]]) #find the joint dist of points 9 and 99 
+#joint dist
+dist_09 = np.array([1-lattice[0,9], lattice[0,9]])
+dist_99 = np.array([1-lattice[9,9], lattice[9,9]])
+joint_dist = np.array([[dist_09[0]*dist_99[0], dist_09[0]*dist_99[1]], [dist_09[1]*dist_99[0], dist_09[1]*dist_99[1]]]) #find the joint dist of points 9 and 99 
 print(joint_dist)
