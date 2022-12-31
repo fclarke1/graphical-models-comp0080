@@ -1,16 +1,16 @@
 import numpy as np
 import math
 
-b = 4 #set beta
+b = 0.01 #set beta
 
-#initialize the lattice with random values
+#initialize the lattice random values
 lattice = np.random.binomial(1, 0.5, size=(10, 10))
 
 #set number of iterations and initial number of samples to burn
 iter = 10000
-burn = 100
+burn = 1000
 
-#create an array to store the samples - only interested in the values at position 9 and 99 so only save these
+#create an array to store the samples - only interested in the values at position (0,9) and (9,9) so only save these
 samples = np.zeros((iter, 2))
 
 def neighbours(lattice,x,y):
@@ -24,27 +24,34 @@ def neighbours(lattice,x,y):
     neighbours (list) : list of values of the neighbours on the lattice
     '''
     neighbours = []
+    m = lattice.shape[0]
+    n = lattice.shape[1]
     if x > 0:
         neighbours.append(lattice[x-1,y])
-    if x < 9:
+    if x < m-1:
         neighbours.append(lattice[x+1,y])
     if y > 0:
         neighbours.append(lattice[x,y-1])
-    if y < 9:
+    if y < n-1:
         neighbours.append(lattice[x,y+1])
     return neighbours
 
+#define conditional probability
+def cond_prob(lattice, x, y):
+    p = (math.exp(b*sum(neighbours(lattice, x, y))))/(math.exp(b*sum(neighbours(lattice, x, y))) + math.exp(b*sum(abs(n - 1) for n in neighbours(lattice, x,y))))
+    return p
+
 #iterate through the sampling process
 for i in range(iter + burn):
-  for x in range(10):
-    for y in range(10):
-      # Calculate the conditional probability based on the neighbours
-      p = (math.exp(b*sum(neighbours(lattice, x, y))))/(math.exp(b*sum(neighbours(lattice, x, y))) + math.exp(b*sum(abs(neighbour - 1) for neighbour in neighbours(lattice, x,y))))
-      # Sample from the full conditional distribution of lattice[x,y], given the neighbors
-      lattice[x,y] = np.random.binomial(1, p)
-  if i > burn: # Store the samples of both corners for samples after burn period
-    samples[i - burn,0] = lattice[0,9]
-    samples[i - burn,1] = lattice[9,9]
+    for x in range(10):
+        for y in range(10):
+            # Calculate the conditional probability based on the neighbours
+            p = cond_prob(lattice, x, y)
+            # Sample from the full conditional distribution of lattice[x,y], given the neighbors
+            lattice[x,y] = np.random.binomial(1, p)
+    if i > burn: # Store the samples of both corners for samples after burn period
+        samples[i - burn,0] = lattice[0,9]
+        samples[i - burn,1] = lattice[9,9]
 
 p_0_0 = np.count_nonzero(np.all(samples==np.array([0,0]), axis=1)) / iter
 p_0_1 = np.count_nonzero(np.all(samples==np.array([0,1]), axis=1)) / iter
@@ -53,3 +60,4 @@ p_1_1 = np.count_nonzero(np.all(samples==np.array([1,1]), axis=1)) / iter
 
 joint_dist = np.array([[p_0_0, p_0_1], [p_1_0, p_1_1]])
 print(joint_dist)
+
