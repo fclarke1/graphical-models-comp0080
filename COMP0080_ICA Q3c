@@ -1,7 +1,8 @@
 import numpy as np
 import math
+import random
 
-b = 0.01 #set beta
+b = 4 #set beta
 
 #initialize the lattice random values
 lattice = np.random.binomial(1, 0.5, size=(10, 10))
@@ -43,12 +44,15 @@ def cond_prob(lattice, x, y):
 
 #iterate through the sampling process
 for i in range(iter + burn):
-    for x in range(10):
-        for y in range(10):
-            # Calculate the conditional probability based on the neighbours
-            p = cond_prob(lattice, x, y)
-            # Sample from the full conditional distribution of lattice[x,y], given the neighbors
-            lattice[x,y] = np.random.binomial(1, p)
+    #move through the nodes in a random order
+    indices = [(row, col) for row in range(10) for col in range(10)] # Generate a list of indices for the lattice
+    random.shuffle(indices) # Shuffle the list of indices
+
+    for x, y in indices:
+        # Calculate the conditional probability based on the neighbours
+        p = cond_prob(lattice, x, y)
+        # Sample from the full conditional distribution of lattice[x,y], given the neighbors
+        lattice[x,y] = np.random.binomial(1, p)
     if i > burn: # Store the samples of both corners for samples after burn period
         samples[i - burn,0] = lattice[0,9]
         samples[i - burn,1] = lattice[9,9]
