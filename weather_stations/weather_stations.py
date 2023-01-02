@@ -9,7 +9,7 @@ H = 3  # number of Markov models
 def condp(data: NDArray) -> NDArray:
     """Return a conditional distribution from a data array
 
-    Note that all columns sum to 1
+    All columns sum to 1
 
     Args:
         data: An array of data
@@ -63,7 +63,7 @@ def random_initialisation() -> tuple[NDArray, NDArray, NDArray]:
     return condp(ph), condp(pv1gh), condp(pvgvh)
 
 
-def prior_pvgvh() -> NDArray:
+def prior_pvgvh(data: NDArray) -> NDArray:
     """Set p(v_t|v_{t-1},h) from the data
 
     Computes the empirical distribution from the data
@@ -76,7 +76,7 @@ def prior_pvgvh() -> NDArray:
     for h in range(H):
         r, c = np.where(data[:, :-1] == h)
         n = data[(r, c + 1)]
-        nc = NDArray([np.count_nonzero(n == i) for i in range(V)])
+        nc = np.array([np.count_nonzero(n == i) for i in range(V)])
         pvgvh[:, h] = nc
 
     pvgvh /= np.sum(pvgvh, axis=0)
@@ -120,7 +120,7 @@ def run_em(
         for n in range(data.shape[0]):
             T = data.shape[1]
 
-            lph_old = np.log(ph) + np.log(pv1gh[data[n][0]])[:, np.newaxis]
+            lph_old = np.log(ph) + np.log(pv1gh[data[n, 0]])[:, np.newaxis]
 
             for t in range(1, T):
                 lph_old += np.log(pvgvh[data[n, t], data[n, t - 1]])[:, np.newaxis]
@@ -130,10 +130,10 @@ def run_em(
 
             ph_stat += ph_old[n]
 
-            pv1gh_stat[data[n][0]] += np.squeeze(ph_old[n])
+            pv1gh_stat[data[n, 0]] += np.squeeze(ph_old[n])
 
             for t in range(1, T):
-                pvgvh_stat[data[n, t], data[n, t - 1], :] += np.squeeze(ph_old[n])
+                pvgvh_stat[data[n, t], data[n, t - 1]] += np.squeeze(ph_old[n])
 
         llik.append(loglik)
 
@@ -149,18 +149,28 @@ def run_em(
     return ph, pv1gh, pvgvh, phgv, llik
 
 
+data = np.loadtxt("meteo1.csv").astype(int)
+
 # uniform initialisation
-# ph, pv1gh, pvgvh = uniform_initialisation()
+# ph_0, pv1gh_0, pvgvh_0 = uniform_initialisation()
 
 # uniform_initialisation with prior generated from the data
-# ph, pv1gh, _, pvgvh = uniform_initialisation(), prior_pvgvh()
+# ph_0, pv1gh_0, _ = uniform_initialisation()
+# pvgvh_0 = prior_pvgvh(data)
 
 # random initialisation
 ph_0, pv1gh_0, pvgvh_0 = random_initialisation()
 
-data = np.loadtxt("meteo1.csv").astype(int)
+# random_initialisation with prior generated from the data
+# ph_0, pv1gh_0, _ = random_initialisation()
+# pvgvh_0 = prior_pvgvh(data)
 
-ph, pv1gh, pvgvh, phgv, llik = run_em(data=data, ph=ph_0, pv1gh=pv1gh_0, pvgvh=pvgvh_0)
+ph, pv1gh, pvgvh, phgv, llik = run_em(
+    data=data,
+    ph=ph_0,
+    pv1gh=pv1gh_0,
+    pvgvh=pvgvh_0,
+)
 
 print("")
 print("")
