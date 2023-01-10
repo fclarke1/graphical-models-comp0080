@@ -75,7 +75,7 @@ def decode(
     y: NDArray,
     p: float,
     max_iters: int = 20,
-) -> tuple[NDArray, int]:
+) -> tuple[NDArray, int, int]:
     """Decode a word using a parity check matrix
 
     Implements the Loopy Belief Propagation for Binary Symmetric Channel
@@ -89,12 +89,15 @@ def decode(
         max_iters: a maximum number of iterations to reach convergence
 
     Returns:
-        tuple[NDArray, int]: a tuple of the decoded message and a return code
-            denoting whether the algorithm converged to an answer.
+        tuple[NDArray, int, int]: a tuple of the decoded message, a return code
+            denoting whether the algorithm converged to an answer, and
+            the number of iterations needed
     """
     return_code = -1
     # start off with decoded as the same as the received word
     decoded = y
+    # tracking the number of iterations
+    i = -1
 
     # initialise the probabilities matrix to be updated by the algorithm
     p_mat = initialise_probs(H, y, p)
@@ -103,7 +106,7 @@ def decode(
     m_v = p_mat.copy()
 
     # iterate through the algorithm
-    for _ in range(max_iters):
+    for i in range(max_iters):
         # next round of message passing from check to bit nodes
         p_mat = check_to_bit(p_mat)
 
@@ -119,7 +122,7 @@ def decode(
         # check nodes
         p_mat = bit_to_check(m_v, p_mat)
 
-    return decoded, return_code
+    return decoded, return_code, i
 
 
 H = np.loadtxt("H1.txt")
@@ -136,14 +139,13 @@ y = np.loadtxt("y1.txt")
 # )
 # y = np.array([1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
 
-decoded, success = decode(H, y, 0.1, max_iters=200)
+decoded, success, num_iterations = decode(H, y, 0.1)
 
 if success == 0:
     print("---- SUCCESSFUL DECODING -----")
-    empirical_noise_ratio = 1 - np.count_nonzero(y == decoded) / len(decoded)
-    print(f"empirical noise ratio: {empirical_noise_ratio:.2f}")
 
     original_msg = bytearray(np.packbits(decoded[:248])).decode().strip("\x00")
     print(f"decoded message: {original_msg}")
+    print(f"number of iterations needed: {num_iterations + 1}")
 else:
     print("---- unsuccessful decoding -----")

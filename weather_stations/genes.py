@@ -2,14 +2,14 @@ import numpy as np
 from numpy.typing import NDArray
 
 # global parameters
-V = 3  # number of observable states
-H = 3  # number of Markov models
+V = 4  # number of observable states
+H = 2  # number of Markov models
 
 
 def condp(data: NDArray) -> NDArray:
     """Return a conditional distribution from a data array
 
-    All columns sum to 1
+    Note that all columns sum to 1
 
     Args:
         data: An array of data
@@ -63,26 +63,6 @@ def random_initialisation() -> tuple[NDArray, NDArray, NDArray]:
     return condp(ph), condp(pv1gh), condp(pvgvh)
 
 
-def prior_pvgvh(data: NDArray) -> NDArray:
-    """Set p(v_t|v_{t-1},h) from the data
-
-    Computes the empirical distribution from the data
-
-    Returns:
-        NDArray: a (V,V,H) matrix for the conditional distribution
-            of p(v_t|v_{t-1},h) based on the data
-    """
-    pvgvh = np.zeros((V, H))
-    for h in range(H):
-        r, c = np.where(data[:, :-1] == h)
-        n = data[(r, c + 1)]
-        nc = np.array([np.count_nonzero(n == i) for i in range(V)])
-        pvgvh[:, h] = nc
-
-    pvgvh /= np.sum(pvgvh, axis=0)
-    return np.broadcast_to(pvgvh, (V, V, H))
-
-
 def run_em(
     data: NDArray,
     ph: NDArray,
@@ -120,23 +100,21 @@ def run_em(
         for n in range(data.shape[0]):
             T = data.shape[1]
 
-            lph_old = np.log(ph) + np.log(pv1gh[data[n, 0]])[:, np.newaxis]
+            lph_old = np.log(ph) + np.log(pv1gh[data[n][0]])[:, np.newaxis]
 
             for t in range(1, T):
                 lph_old += np.log(pvgvh[data[n, t], data[n, t - 1]])[:, np.newaxis]
 
-            print(lph_old)
             ph_old.append(condexp(lph_old))
             loglik += np.log(np.sum(np.exp(lph_old)))
 
             ph_stat += ph_old[n]
 
-            pv1gh_stat[data[n, 0]] += np.squeeze(ph_old[n])
+            pv1gh_stat[data[n][0]] += np.squeeze(ph_old[n])
 
             for t in range(1, T):
-                pvgvh_stat[data[n, t], data[n, t - 1]] += np.squeeze(ph_old[n])
+                pvgvh_stat[data[n, t], data[n, t - 1], :] += np.squeeze(ph_old[n])
 
-        breakpoint()
         llik.append(loglik)
 
         # m-step
@@ -151,50 +129,54 @@ def run_em(
     return ph, pv1gh, pvgvh, phgv, llik
 
 
-data = np.loadtxt("meteo1.csv").astype(int)
+ph_0, pv1gh_0, pvgvh_0 = random_initialisation()
 
-# uniform initialisation
-ph_0, pv1gh_0, pvgvh_0 = uniform_initialisation()
+data = np.loadtxt("genes_int.txt").astype(int)
 
-# uniform_initialisation with prior generated from the data
-# ph_0, pv1gh_0, _ = uniform_initialisation()
-# pvgvh_0 = prior_pvgvh(data)
+ph, pv1gh, pvgvh, phgv, llik = run_em(data=data, ph=ph_0, pv1gh=pv1gh_0, pvgvh=pvgvh_0)
 
-# random initialisation
-# ph_0, pv1gh_0, pvgvh_0 = random_initialisation()
+seq_1 = []
+seq_2 = []
+for idx, row in enumerate(np.squeeze(phgv)):
+    if row[0] > 0.5:
+        seq_1.append(data[idx])
+    else:
+        seq_2.append(data[idx])
 
-# random_initialisation with prior generated from the data
-# ph_0, pv1gh_0, _ = random_initialisation()
-# pvgvh_0 = prior_pvgvh(data)
 
-ph, pv1gh, pvgvh, phgv, llik = run_em(
-    data=data,
-    ph=ph_0,
-    pv1gh=pv1gh_0,
-    pvgvh=pvgvh_0,
-)
+seq_1_chars = []
+for seq in seq_1:
+    char_sec = ""
+    for el in seq:
+        if el == 0:
+            char = "A"
+        elif el == 1:
+            char = "C"
+        elif el == 2:
+            char = "G"
+        else:
+            char = "T"
+        char_sec += char
+    seq_1_chars.append(char_sec)
 
-print("")
-print("")
+seq_2_chars = []
+for seq in seq_2:
+    char_sec = ""
+    for el in seq:
+        if el == 0:
+            char = "A"
+        elif el == 1:
+            char = "C"
+        elif el == 2:
+            char = "G"
+        else:
+            char = "T"
+        char_sec += char
+    seq_2_chars.append(char_sec)
 
-print("----- learned parameters -----")
-
-print("\np(h):")
-print(np.around(ph, 4))
-
-print("\np(v_1|h):")
-print(np.around(pv1gh, 4))
-
-pvgvh = np.around(pvgvh, 4)
-print("\np(v_t|v_{t-1},h):")
-print("h = 1:")
-print(pvgvh[:, :, 0])
-print("h = 2:")
-print(pvgvh[:, :, 1])
-print("h = 3:")
-print(pvgvh[:, :, 2])
-
-print(f"\nlog likelihood for these parameters: {llik[-1]:.4f}")
-
-print("\nposterior for first 10 rows:")
-print(np.around(phgv, 4)[:10])
+with open("gene_clustered_4.txt", "w") as f:
+    for seq in seq_1_chars:
+        f.write(f"{seq}\n")
+    f.write("\n\n")
+    for seq in seq_2_chars:
+        f.write(f"{seq}\n")

@@ -11,7 +11,7 @@ def echelon(m: NDArray) -> NDArray:
     Returns:
         NDArray: an echelon version of the given matrix
     """
-    if 0 in m.shape:
+    if m.shape[0] == 0 and m.shape[0] == 0:
         # one of the rows or cols is zero, no more actions to take
         return m
 
@@ -94,16 +94,32 @@ def create_encoder_matrix(h: NDArray) -> tuple[NDArray, NDArray]:
     return H_hat, G
 
 
+# H = np.array([
+#     [1, 1, 1, 1, 0, 0],
+#     [0, 0, 1, 1, 0, 1],
+#     [1, 0, 0, 1, 1, 0],
+# ])
+
 H = np.array([
-    [1, 1, 1, 1, 0, 0],
-    [0, 0, 1, 1, 0, 1],
-    [1, 0, 0, 1, 1, 0],
+    [1, 1, 1, 0, 1, 0, 0],
+    [0, 1, 1, 1, 0, 1, 0],
+    [1, 0, 1, 1, 0, 0, 1],
 ])
+
+# H = np.array([
+#     [1, 1, 1, 0, 0],
+#     [0, 1, 0, 1, 0],
+#     [1, 0, 0, 0, 1],
+# ])
 
 
 H_hat, G = create_encoder_matrix(H)
 
+breakpoint()
+
 # generate some random ts and assert H_hat @ G @ t = 0
-ts = np.random.randint(0, 2, size=9).reshape((3, 3))
+dims = G.shape[1]
+num_tests = 100
+ts = np.random.randint(0, 2, size=num_tests*dims).reshape((num_tests, dims))
 for t in ts:
     assert not np.any((H_hat @ G @ t) % 2)
